@@ -1,0 +1,10 @@
+{
+  "name": "tashizan-densha",
+  "version": "0.1.0",
+  "description": "4歳児向け 足し算でんしゃ — 数字盤の上を電車が進む足し算アプリ",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test"
+  }
+}
