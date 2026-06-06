@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#2b6cb0" />
+  <title>たしざんでんしゃ</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div id="app">
+    <header class="app-header">
+      <h1 class="app-title">たしざんでんしゃ <span aria-hidden="true">🚃</span></h1>
+      <button id="settings-btn" class="icon-btn" aria-label="せってい">⚙️</button>
+    </header>
+
+    <!-- 問題表示 -->
+    <section class="problem" id="problem" aria-live="polite">
+      <span class="problem-num" id="p-start">8</span>
+      <span class="problem-op">＋</span>
+      <span class="problem-num" id="p-addend">7</span>
+      <span class="problem-op">＝</span>
+      <span class="problem-q" id="p-goal">？</span>
+      <button id="replay-btn" class="icon-btn small" aria-label="もういちど きく">🔊</button>
+    </section>
+
+    <!-- 数字盤 + 電車 -->
+    <section class="board-wrap">
+      <div id="board" class="board"><!-- セルは JS で生成 --></div>
+      <div id="train" class="train" aria-hidden="true">🚃</div>
+    </section>
+
+    <!-- 操作エリア -->
+    <section class="controls">
+      <button id="advance-btn" class="advance-btn">▶ すすむ</button>
+      <div class="steps-left" id="steps-left" aria-label="のこりの すすむ かいすう"></div>
+    </section>
+
+    <!-- ごほうび編成 -->
+    <section class="reward">
+      <span class="reward-label">きみのでんしゃ</span>
+      <div id="train-strip" class="train-strip"></div>
+      <span class="reward-count" id="reward-count">せいかい 0かい</span>
+    </section>
+  </div>
+
+  <!-- 正解演出 -->
+  <div id="celebrate" class="celebrate hidden" aria-hidden="true"></div>
+
+  <!-- 設定オーバーレイ -->
+  <div id="settings" class="overlay hidden" role="dialog" aria-label="せってい">
+    <div class="overlay-card">
+      <h2>せってい</h2>
+
+      <div class="setting-group">
+        <h3>たすかず</h3>
+        <div id="addend-choices" class="addend-choices"></div>
+      </div>
+
+      <div class="setting-group">
+        <h3>モード</h3>
+        <div class="mode-toggle">
+          <button data-mode="beginner" class="mode-opt">はじめて<br /><small>すすむボタン</small></button>
+          <button data-mode="advanced" class="mode-opt">じょうきゅう<br /><small>マスをタップ</small></button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <h3>おと</h3>
+        <div class="sound-toggle">
+          <button data-sound="on" class="sound-opt">🔊 おん</button>
+          <button data-sound="off" class="sound-opt">🔇 おふ</button>
+        </div>
+      </div>
+
+      <div class="setting-group">
+        <button id="reset-train" class="reset-btn">でんしゃを はじめから</button>
+      </div>
+
+      <button id="close-settings" class="close-btn">とじる</button>
+    </div>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
