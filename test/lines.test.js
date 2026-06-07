@@ -28,13 +28,18 @@ test('山手線: 30 coded stations, 11-car train', () => {
   assert.equal(stationCode(y, 30), 'JY30');
 });
 
-test('京浜東北線: 30 coded stations, 10-car train', () => {
+test('京浜東北線: 全47駅(大宮〜大船)に駅ナンバーあり、10両', () => {
   const k = getLine('keihin');
   assert.equal(k.code, 'JK');
   assert.equal(k.cars, 10);
-  assert.equal(k.coded, 30);
+  assert.equal(k.coded, 47);
+  assert.equal(k.stations.length, 47);
   assert.equal(stationName(k, 1), '大宮');
   assert.equal(stationCode(k, 22), 'JK22');
+  assert.equal(stationName(k, 31), '蒲田');
+  assert.equal(stationName(k, 47), '大船');
+  assert.equal(stationCode(k, 47), 'JK47');
+  assert.equal(stationYomi(k, 47), 'おおふな');
 });
 
 test('常磐線: 15-car train, only first 10 stations are coded (JJ)', () => {

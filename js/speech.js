@@ -73,5 +73,54 @@ export function createSpeech({ enabled = () => true } = {}) {
     speak('でんしゃ かんせい！ しゅっぱつ しんこう！', { rate: 1, pitch: 1.3 });
   }
 
-  return { cancel, speakProblem, speakStep, speakCorrect, speakTryAgain, speakDeparture };
+  // チャレンジ結果
+  function speakResult(score, isRecord) {
+    const head = isRecord ? 'しんきろく！ ' : '';
+    speak(`${head}${score}もん！ すごい！`, { rate: 1, pitch: 1.3 });
+  }
+
+  // ---- 効果音(Web Audio。ファイル不要・オフライン可) ----
+  let audioCtx = null;
+  function ensureAudio() {
+    const Ctor = window.AudioContext || window.webkitAudioContext;
+    if (!Ctor) return null;
+    if (!audioCtx) audioCtx = new Ctor();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  // 正解音の再生がユーザー操作の少し後になるので、操作時に先に起こしておく。
+  function unlockAudio() {
+    try { ensureAudio(); } catch (e) { /* 非対応でも無音で続行 */ }
+  }
+  function tone(ctx, freq, start, dur, peak = 0.25) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    gain.gain.setValueAtTime(0.0001, start);
+    gain.gain.exponentialRampToValueAtTime(peak, start + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+    osc.start(start);
+    osc.stop(start + dur + 0.02);
+  }
+  // 「ピンポーン」: 高い音 → やや低い音(ドアベル風の下降2音)
+  function chimeCorrect() {
+    if (!enabled()) return;
+    try {
+      const ctx = ensureAudio();
+      if (!ctx) return;
+      const t = ctx.currentTime;
+      tone(ctx, 1318.5, t, 0.16);        // ピン(E6)
+      tone(ctx, 1046.5, t + 0.14, 0.5);  // ポーン(C6、長め)
+    } catch (e) {
+      /* 非対応でも無音で続行 */
+    }
+  }
+
+  return {
+    cancel, speakProblem, speakStep, speakCorrect, speakTryAgain, speakDeparture, speakResult,
+    chimeCorrect, unlockAudio,
+  };
 }

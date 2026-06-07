@@ -3,7 +3,6 @@
 // DOM や localStorage には直接触れず、storage を注入して永続化する(テスト容易性)。
 
 import { makeProblem } from './problem.js';
-import { MAX } from './board.js';
 
 const KEYS = {
   trainLength: 'td.trainLength',
@@ -11,7 +10,10 @@ const KEYS = {
   mode: 'td.mode',
   soundOn: 'td.soundOn',
   lineId: 'td.lineId',
+  maxNumber: 'td.maxNumber',
 };
+
+const DEFAULT_MAX = 30;
 
 /**
  * ゲーム状態を生成する。
@@ -34,6 +36,7 @@ export function createGame({ storage, rng = Math.random } = {}) {
     mode: load(KEYS.mode, 'beginner'),         // 'beginner' | 'advanced'
     soundOn: load(KEYS.soundOn, 'true') === 'true',
     lineId: load(KEYS.lineId, 'normal'),       // 隠しモードの路線('normal' は通常)
+    maxNumber: Number(load(KEYS.maxNumber, DEFAULT_MAX)), // 数字盤・出題の上限(20/30/50/100)
   };
 
   // 'random' はそのまま、それ以外は数値の足す数として解釈する
@@ -42,8 +45,9 @@ export function createGame({ storage, rng = Math.random } = {}) {
     return s === 'random' ? 'random' : Number(s);
   }
 
-  function newProblem() {
-    const p = makeProblem({ addend: state.addendChoice, max: MAX, rng });
+  // addendChoice を一時的に上書きできる(チャレンジのおまかせ強制用。保存値は変えない)。
+  function newProblem(addendChoice = state.addendChoice) {
+    const p = makeProblem({ addend: addendChoice, max: state.maxNumber, rng });
     state.problem = p;
     state.trainPos = p.start;
     state.stepsLeft = p.addend;
@@ -92,6 +96,11 @@ export function createGame({ storage, rng = Math.random } = {}) {
     storage.setItem(KEYS.lineId, id);
   }
 
+  function setMax(n) {
+    state.maxNumber = Number(n);
+    storage.setItem(KEYS.maxNumber, state.maxNumber);
+  }
+
   return {
     state,
     newProblem,
@@ -103,5 +112,6 @@ export function createGame({ storage, rng = Math.random } = {}) {
     setMode,
     setSoundOn,
     setLine,
+    setMax,
   };
 }

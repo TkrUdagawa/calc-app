@@ -15,6 +15,26 @@ function fakeStorage(initial = {}) {
 // addend 固定 + rng 固定で start を決定的にする。
 const fixedRng = () => 0; // start は最小(=1)になる
 
+test('maxNumber defaults to 30 and persists across instances', () => {
+  const storage = fakeStorage();
+  const g = createGame({ storage, rng: fixedRng });
+  assert.equal(g.state.maxNumber, 30);
+  g.setMax(100);
+  assert.equal(g.state.maxNumber, 100);
+  const g2 = createGame({ storage, rng: fixedRng });
+  assert.equal(g2.state.maxNumber, 100);
+});
+
+test('newProblem keeps the goal within the configured range', () => {
+  const highRng = () => 0.999999; // start を上限寄りにする
+  const g = createGame({ storage: fakeStorage(), rng: highRng });
+  g.setMax(20);
+  g.setAddendChoice(9);
+  g.newProblem();
+  assert.ok(g.state.problem.goal <= 20, `goal ${g.state.problem.goal} should be <= 20`);
+  assert.ok(g.state.problem.start >= 1);
+});
+
 test('new game starts the train at the problem start position', () => {
   const g = createGame({ storage: fakeStorage(), rng: fixedRng });
   g.setAddendChoice(7);

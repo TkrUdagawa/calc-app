@@ -280,6 +280,19 @@ html, body {
 .addend-choices button.omakase { grid-column: span 5; background: #fff7ed; border-color: var(--goal-edge); }
 .addend-choices button.selected { background: var(--accent); color: #fff; border-color: var(--accent-dark); }
 
+.range-choices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.range-opt {
+  border: 3px solid var(--cell-edge);
+  background: #fff;
+  border-radius: 12px;
+  padding: 12px 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--ink);
+  cursor: pointer;
+}
+.range-opt.selected { background: var(--accent); color: #fff; border-color: var(--accent-dark); }
+
 .mode-toggle, .sound-toggle { display: flex; gap: 10px; }
 .mode-opt, .sound-opt {
   flex: 1;
@@ -436,5 +449,162 @@ html, body {
 .line-chip.normal { background: #eaf4ff; box-shadow: none; }
 .line-opt-name { flex: 1; text-align: left; }
 .line-opt-cars { font-size: 0.85rem; color: var(--accent); font-weight: 800; }
+
+/* ===== チャレンジ ===== */
+.header-btns { display: flex; align-items: center; gap: 8px; }
+.quit-btn {
+  border: none;
+  background: var(--pop);
+  color: #fff;
+  border-radius: 999px;
+  padding: clamp(8px, 1.4vh, 14px) clamp(16px, 3vw, 26px);
+  font-weight: 800;
+  font-size: clamp(14px, 2.4vh, 20px);
+  cursor: pointer;
+  box-shadow: 0 3px 0 #c85a3e;
+}
+.quit-btn:active { transform: translateY(2px); box-shadow: 0 1px 0 #c85a3e; }
+
+.challenge-hud {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(4px, 1vh, 8px);
+  background: #fff;
+  border-radius: 16px;
+  padding: clamp(4px, 1vh, 10px) clamp(10px, 2vw, 18px);
+  box-shadow: 0 3px 0 var(--cell-edge);
+}
+.hud-main { display: flex; align-items: center; justify-content: center; gap: clamp(8px, 2vw, 18px); }
+.hud-label { font-weight: 800; color: var(--accent-dark); font-size: clamp(16px, 2.6vh, 22px); }
+.hud-score {
+  font-weight: 900;
+  color: var(--accent);
+  font-size: clamp(28px, 5vh, 48px);
+  min-width: 1.3em;
+  text-align: center;
+}
+.hud-score.pop { animation: score-pop 0.35s; }
+.hud-unit { font-weight: 800; color: var(--accent-dark); font-size: clamp(14px, 2.2vh, 18px); }
+.hud-timer {
+  font-weight: 900;
+  color: var(--accent-dark);
+  font-size: clamp(20px, 3.4vh, 30px);
+  margin-left: clamp(8px, 2vw, 18px);
+}
+.hud-timer.low { color: #e53e3e; }
+
+@keyframes score-pop {
+  0% { transform: scale(0.6); }
+  60% { transform: scale(1.25); }
+  100% { transform: scale(1); }
+}
+
+/* 連続モード: 京浜東北線の駅すすみ路線図 */
+.streak-line { display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; }
+.streak-now { display: flex; align-items: center; gap: 8px; min-height: 1.6em; }
+.now-code {
+  background: #1fa8dc;
+  color: #fff;
+  font-weight: 800;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: clamp(12px, 2vh, 16px);
+}
+.now-name { font-weight: 800; color: #0d6f97; font-size: clamp(16px, 2.6vh, 22px); }
+.now-name rt { font-size: 0.48em; font-weight: 700; color: #1fa8dc; line-height: 1; }
+.terminus {
+  background: #f6a609;
+  color: #fff;
+  font-weight: 800;
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: clamp(11px, 1.8vh, 14px);
+}
+
+.line-track {
+  display: flex;
+  align-items: flex-start;
+  width: 100%;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding: 4px 50% 2px; /* 端の駅も中央に来られるように */
+}
+.line-track::-webkit-scrollbar { display: none; }
+.stop {
+  position: relative;
+  flex: 0 0 auto;
+  width: clamp(34px, 5vw, 52px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+/* 駅間をつなぐ線(この駅から次の駅へ) */
+.stop::after {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 100%;
+  height: 4px;
+  background: #bfe5f5;
+  z-index: 0;
+}
+.stop:last-child::after { display: none; }
+.stop.done::after { background: #1fa8dc; }
+.dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #bfe5f5;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px #bfe5f5;
+  z-index: 1;
+}
+.stop.done .dot { background: #1fa8dc; box-shadow: 0 0 0 1px #1fa8dc; }
+.stop.current .dot { background: #fff; border-color: #1fa8dc; box-shadow: 0 0 0 2px #1fa8dc; }
+.stop.current::before { /* 現在駅に電車マーカー */
+  content: "🚃";
+  position: absolute;
+  top: -1.2em;
+  font-size: clamp(14px, 2.2vh, 18px);
+  z-index: 2;
+}
+.stop-code {
+  font-size: clamp(7px, 1.2vh, 10px);
+  color: #0d6f97;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+.stop.todo .stop-code { color: #a9c7d8; }
+
+.reached { font-size: 0.5em; color: #1fa8dc; font-weight: 800; }
+
+/* チャレンジ選択 */
+.challenge-options { display: flex; flex-direction: column; gap: 12px; margin-bottom: 16px; }
+.challenge-opt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: flex-start;
+  border: 3px solid var(--cell-edge);
+  background: #fff;
+  border-radius: 16px;
+  padding: 14px 16px;
+  cursor: pointer;
+  text-align: left;
+}
+.challenge-opt:active { transform: scale(0.98); }
+.ch-name { font-weight: 800; font-size: 1.2rem; color: var(--accent-dark); }
+.ch-desc { font-size: 0.9rem; color: var(--ink); }
+.ch-best { font-size: 0.85rem; font-weight: 700; color: var(--accent); }
+
+/* チャレンジ結果 */
+.result-card { text-align: center; }
+.result-record { font-weight: 900; color: #f6a609; font-size: 1.4rem; margin-bottom: 6px; animation: score-pop 0.5s; }
+.result-text { font-weight: 900; font-size: clamp(28px, 6vh, 44px); color: var(--accent-dark); margin: 8px 0; }
+.result-best { font-weight: 700; color: var(--accent); margin-bottom: 16px; }
+.result-btns { display: flex; gap: 12px; }
+.result-btns .close-btn, .result-btns .reset-btn { flex: 1; }
 
 .hidden { display: none; }

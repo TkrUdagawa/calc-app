@@ -1,12 +1,11 @@
 // 表示層: 盤面の描画、電車の移動アニメーション、モード別の操作、
 // 正解演出、設定オーバーレイを結線する。game と speech に依存する。
 
-import { MAX } from './board.js';
 import { LINES, getLine, stationCode, stationName, stationYomi } from './lines.js';
 
 const STEP_MS = 340; // 電車アニメーションの所要時間(CSS の .train transition と合わせる)
 
-export function createUI({ game, speech }) {
+export function createUI({ game, speech, challenge }) {
   const $ = (id) => document.getElementById(id);
   const boardEl = $('board');
   const boardWrap = boardEl.parentElement;
@@ -15,11 +14,24 @@ export function createUI({ game, speech }) {
   const stripEl = $('train-strip');
   const rewardCountEl = $('reward-count');
   const stationBarEl = $('station-bar');
+  const rewardEl = document.querySelector('.reward');
+  const hudEl = $('challenge-hud');
+  const lineTrackEl = $('line-track');
+  const streakNowEl = $('streak-now');
+  // 連続モードの駅すすみは常に京浜東北線(路線モードの選択とは独立)
+  const KEIHIN = getLine('keihin');
+  const TERMINUS = KEIHIN.stations.length; // 47(大船)
+  const streakStops = {}; // 駅番号 -> .stop 要素
 
   // 現在選択中の路線('normal' のときはテーマ変更なし)
   const currentLine = () => getLine(game.state.lineId);
   // 完成両数(この両数つながると出発)。路線ごとに異なる。
   const completionCars = () => currentLine().cars;
+  // チャレンジ中は強制的にタップ回答(advanced)になる
+  const effectiveMode = () => (challenge.state.active ? 'advanced' : game.state.mode);
+  let timerId = null; // 60びょうチャレンジのカウントダウン
+  let timeLeft = 0;
+  let retryType = 'streak'; // 「もういちど」で再開するチャレンジ種別
   // 車両は内側のラッパーにまとめ、出発時はこれごと右へ走らせる
   const carsEl = document.createElement('div');
   carsEl.className = 'train-cars';
@@ -27,15 +39,19 @@ export function createUI({ game, speech }) {
   const cells = {}; // 数 -> セル要素
   let busy = false; // アニメーション/判定中の入力ロック
 
-  // ---- 盤面の生成 ----
-  for (let n = 1; n <= MAX; n++) {
-    const cell = document.createElement('div');
-    cell.className = 'cell';
-    cell.dataset.n = String(n);
-    cell.textContent = String(n);
-    cell.addEventListener('click', () => onCellTap(n));
-    boardEl.appendChild(cell);
-    cells[n] = cell;
+  // ---- 盤面の生成(はんいに応じて作り直す。列は常に10) ----
+  function buildBoard() {
+    boardEl.innerHTML = '';
+    for (const k in cells) delete cells[k];
+    for (let n = 1; n <= game.state.maxNumber; n++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.dataset.n = String(n);
+      cell.textContent = String(n);
+      cell.addEventListener('click', () => onCellTap(n));
+      boardEl.appendChild(cell);
+      cells[n] = cell;
+    }
   }
 
   // ---- 電車の位置決め ----
@@ -74,7 +90,7 @@ export function createUI({ game, speech }) {
   }
 
   function renderStepsLeft() {
-    if (game.state.mode !== 'beginner') {
+    if (effectiveMode() !== 'beginner') {
       $('steps-left').textContent = '';
       return;
     }
@@ -140,7 +156,7 @@ export function createUI({ game, speech }) {
   // 各マスに数字(＋路線モードなら駅ナンバー/駅名)を描く。
   function decorateCells() {
     const line = currentLine();
-    for (let n = 1; n <= MAX; n++) {
+    for (let n = 1; n <= game.state.maxNumber; n++) {
       const cell = cells[n];
       const code = stationCode(line, n);
       const name = stationName(line, n);
@@ -248,7 +264,7 @@ export function createUI({ game, speech }) {
 
   // ---- モード反映 ----
   function renderMode() {
-    const adv = game.state.mode === 'advanced';
+    const adv = effectiveMode() === 'advanced';
     $('advance-btn').classList.toggle('hidden', adv);
     for (const n in cells) {
       cells[n].classList.toggle('tappable', adv);
@@ -258,19 +274,22 @@ export function createUI({ game, speech }) {
 
   // ---- 出題 ----
   function nextProblem() {
-    game.newProblem();
+    // チャレンジ中は「おまかせ」を強制(保存値は変えない)
+    game.newProblem(challenge.state.active ? 'random' : game.state.addendChoice);
     renderProblem();
     renderMode();
     trainEl.style.opacity = '1'; // 連結演出で隠した電車を戻す
     moveTrainTo(game.state.problem.start, false);
     busy = false;
     $('advance-btn').disabled = false;
-    speech.speakProblem(game.state.problem.start, game.state.problem.addend);
+    if (!challenge.state.active) {
+      speech.speakProblem(game.state.problem.start, game.state.problem.addend);
+    }
   }
 
   // ---- 初級: すすむ ----
   function onAdvance() {
-    if (busy || game.state.mode !== 'beginner') return;
+    if (busy || effectiveMode() !== 'beginner') return;
     if (game.state.stepsLeft <= 0) return;
     busy = true;
     $('advance-btn').disabled = true;
@@ -289,17 +308,21 @@ export function createUI({ game, speech }) {
     }, STEP_MS);
   }
 
-  // ---- 上級: マスをタップ ----
+  // ---- 上級/チャレンジ: マスをタップ ----
   function onCellTap(n) {
-    if (busy || game.state.mode !== 'advanced') return;
+    if (busy || effectiveMode() !== 'advanced') return;
     if (game.checkTap(n)) {
       busy = true;
       moveTrainTo(n, true);
-      setTimeout(onCorrect, STEP_MS);
+      setTimeout(challenge.state.active ? onChallengeCorrect : onCorrect, STEP_MS);
     } else {
       cells[n].classList.add('wrong');
       setTimeout(() => cells[n].classList.remove('wrong'), 400);
-      speech.speakTryAgain();
+      if (challenge.state.active && challenge.state.type === 'streak') {
+        onChallengeWrong(); // 連続モードは1ミスで終了
+      } else {
+        speech.speakTryAgain(); // 通常 / タイムはやりなおし
+      }
     }
   }
 
@@ -382,6 +405,158 @@ export function createUI({ game, speech }) {
     setTimeout(() => layer.classList.add('hidden'), 1800);
   }
 
+  // ---- チャレンジ ----
+  // 連続モード: 京浜東北線の路線図(JK01〜JK47)を1度だけ生成する。
+  function buildStreakLine() {
+    lineTrackEl.innerHTML = '';
+    for (let i = 1; i <= TERMINUS; i++) {
+      const stop = document.createElement('div');
+      stop.className = 'stop';
+      stop.innerHTML = `<span class="dot"></span><span class="stop-code">${stationCode(KEIHIN, i)}</span>`;
+      lineTrackEl.appendChild(stop);
+      streakStops[i] = stop;
+    }
+  }
+
+  // 連続数 N → 現在駅 JK0(N+1)、上限は終点。
+  const streakStationIndex = () => Math.min(challenge.state.score + 1, TERMINUS);
+
+  function updateStreakLine() {
+    const idx = streakStationIndex();
+    for (let i = 1; i <= TERMINUS; i++) {
+      const s = streakStops[i];
+      s.classList.toggle('done', i < idx);
+      s.classList.toggle('current', i === idx);
+      s.classList.toggle('todo', i > idx);
+    }
+    const cur = streakStops[idx];
+    lineTrackEl.scrollLeft = cur.offsetLeft - lineTrackEl.clientWidth / 2 + cur.offsetWidth / 2;
+    const code = stationCode(KEIHIN, idx);
+    const name = stationName(KEIHIN, idx);
+    const yomi = stationYomi(KEIHIN, idx);
+    streakNowEl.innerHTML =
+      `<span class="now-code">${code}</span>` +
+      `<ruby class="now-name">${name}<rt>${yomi}</rt></ruby>` +
+      (idx >= TERMINUS ? `<span class="terminus">しゅうてん!</span>` : '');
+  }
+
+  function openChallengeSelect() {
+    speech.cancel();
+    $('best-streak').textContent = `ベスト: ${challenge.state.best.streak}もん`;
+    $('best-time').textContent = `ベスト: ${challenge.state.best.time}もん`;
+    $('challenge-select').classList.remove('hidden');
+  }
+
+  function updateHud() {
+    $('hud-score').textContent = challenge.state.score;
+    const s = $('hud-score');
+    s.classList.remove('pop');
+    void s.offsetWidth;
+    s.classList.add('pop'); // スコアがポンと跳ねる
+  }
+
+  function tick() {
+    timeLeft -= 1;
+    const t = $('hud-timer');
+    t.textContent = `⏱ ${timeLeft}`;
+    t.classList.toggle('low', timeLeft <= 10); // 残りわずかは赤く
+    if (timeLeft <= 0) {
+      clearInterval(timerId);
+      timerId = null;
+      finishChallenge();
+    }
+  }
+
+  function startChallenge(type) {
+    speech.unlockAudio(); // 操作(クリック)のうちに効果音を起こしておく
+    $('challenge-select').classList.add('hidden');
+    $('challenge-result').classList.add('hidden');
+    retryType = type;
+    challenge.start(type);
+    // 画面を「チャレンジ用」に切替
+    rewardEl.classList.add('hidden');
+    hudEl.classList.remove('hidden');
+    $('challenge-btn').classList.add('hidden');
+    $('settings-btn').classList.add('hidden');
+    $('quit-challenge').classList.remove('hidden');
+    $('hud-label').textContent = type === 'streak' ? 'れんぞく' : 'とけた';
+    const timerEl = $('hud-timer');
+    if (type === 'time') {
+      timeLeft = 60;
+      timerEl.textContent = `⏱ ${timeLeft}`;
+      timerEl.classList.remove('hidden', 'low');
+      timerId = setInterval(tick, 1000);
+    } else {
+      timerEl.classList.add('hidden');
+    }
+    // 連続モードだけ京浜東北線の駅すすみを表示
+    if (type === 'streak') {
+      $('streak-line').classList.remove('hidden');
+      updateStreakLine();
+    } else {
+      $('streak-line').classList.add('hidden');
+    }
+    updateHud();
+    nextProblem();
+  }
+
+  // 正解(チャレンジ中の高速ループ)。読み上げの代わりに「ピンポーン」を鳴らす。
+  function onChallengeCorrect() {
+    challenge.correct();
+    speech.chimeCorrect();
+    updateHud();
+    if (challenge.state.type === 'streak') updateStreakLine(); // 次の駅へ進む
+    cells[game.state.problem.goal].classList.add('right');
+    setTimeout(nextProblem, 420);
+  }
+
+  // 連続モードでミス → 正解マスを見せて終了。
+  function onChallengeWrong() {
+    busy = true;
+    challenge.wrong(); // 内部で finish 済み
+    cells[game.state.problem.goal].classList.add('right');
+    setTimeout(finishChallenge, 800);
+  }
+
+  function finishChallenge() {
+    if (timerId) { clearInterval(timerId); timerId = null; }
+    if (challenge.state.active) challenge.finish(); // タイム/やめる経由
+    showChallengeResult();
+  }
+
+  function showChallengeResult() {
+    busy = true;
+    const { type, score, isRecord, best } = challenge.state;
+    $('result-record').classList.toggle('hidden', !isRecord);
+    if (type === 'streak') {
+      // 到達した京浜東北線の駅を併記
+      const idx = streakStationIndex();
+      const reached = score > 0
+        ? `<br><span class="reached">${stationCode(KEIHIN, idx)} ${stationName(KEIHIN, idx)} まで!</span>`
+        : '';
+      $('result-text').innerHTML = `れんぞく ${score}もん!${reached}`;
+    } else {
+      $('result-text').textContent = `60びょうで ${score}もん!`;
+    }
+    $('result-best').textContent = `ベスト: ${best[type]}もん`;
+    celebrate();
+    speech.speakResult(score, isRecord);
+    $('challenge-result').classList.remove('hidden');
+  }
+
+  // 通常モードへ復帰。
+  function endChallenge() {
+    if (timerId) { clearInterval(timerId); timerId = null; }
+    $('challenge-result').classList.add('hidden');
+    hudEl.classList.add('hidden');
+    rewardEl.classList.remove('hidden');
+    $('quit-challenge').classList.add('hidden');
+    $('challenge-btn').classList.remove('hidden');
+    $('settings-btn').classList.remove('hidden');
+    renderTrainStrip(); // 通常の編成を戻す
+    nextProblem();
+  }
+
   // ---- 設定オーバーレイ ----
   function buildSettings() {
     // 足す数の選択ボタン
@@ -401,6 +576,8 @@ export function createUI({ game, speech }) {
     omakase.addEventListener('click', () => selectAddend('random'));
     wrap.appendChild(omakase);
 
+    document.querySelectorAll('.range-opt').forEach((el) =>
+      el.addEventListener('click', () => selectMax(Number(el.dataset.max))));
     document.querySelectorAll('.mode-opt').forEach((el) =>
       el.addEventListener('click', () => selectMode(el.dataset.mode)));
     document.querySelectorAll('.sound-opt').forEach((el) =>
@@ -421,6 +598,8 @@ export function createUI({ game, speech }) {
       const v = b.dataset.addend === 'random' ? 'random' : Number(b.dataset.addend);
       b.classList.toggle('selected', v === a);
     });
+    document.querySelectorAll('.range-opt').forEach((el) =>
+      el.classList.toggle('selected', Number(el.dataset.max) === game.state.maxNumber));
     document.querySelectorAll('.mode-opt').forEach((el) =>
       el.classList.toggle('selected', el.dataset.mode === game.state.mode));
     document.querySelectorAll('.sound-opt').forEach((el) =>
@@ -428,6 +607,13 @@ export function createUI({ game, speech }) {
   }
 
   function selectAddend(a) { game.setAddendChoice(a); refreshSettingsUI(); }
+  // はんいを変えたら盤面を作り直し、駅ラベルも貼り直す(出題は設定を閉じたときに更新)
+  function selectMax(n) {
+    game.setMax(n);
+    buildBoard();
+    decorateCells();
+    refreshSettingsUI();
+  }
   function selectMode(m) { game.setMode(m); refreshSettingsUI(); renderMode(); }
   function selectSound(on) {
     game.setSoundOn(on);
@@ -468,8 +654,19 @@ export function createUI({ game, speech }) {
     window.addEventListener('resize', () => {
       if (game.state.trainPos != null) moveTrainTo(game.state.trainPos, false);
     });
+    // チャレンジ関連
+    $('challenge-btn').addEventListener('click', openChallengeSelect);
+    $('close-challenge').addEventListener('click', () => $('challenge-select').classList.add('hidden'));
+    $('ch-streak').addEventListener('click', () => startChallenge('streak'));
+    $('ch-time').addEventListener('click', () => startChallenge('time'));
+    $('quit-challenge').addEventListener('click', finishChallenge);
+    $('result-retry').addEventListener('click', () => startChallenge(retryType));
+    $('result-end').addEventListener('click', endChallenge);
+
+    buildBoard();  // はんいに応じてマスを生成
     buildSettings();
     buildLineSelect();
+    buildStreakLine();
     bindLongPress();
     applyLine();   // 保存された路線(テーマ・駅ラベル・電車)を反映
     nextProblem();

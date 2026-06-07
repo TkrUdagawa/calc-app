@@ -16,7 +16,11 @@
   <div id="app">
     <header class="app-header">
       <h1 class="app-title">たしざんでんしゃ <span aria-hidden="true">🚃</span></h1>
-      <button id="settings-btn" class="icon-btn" aria-label="せってい">⚙️</button>
+      <div class="header-btns">
+        <button id="challenge-btn" class="icon-btn" aria-label="チャレンジ">🏆</button>
+        <button id="settings-btn" class="icon-btn" aria-label="せってい">⚙️</button>
+        <button id="quit-challenge" class="quit-btn hidden">やめる</button>
+      </div>
     </header>
 
     <!-- 問題表示 -->
@@ -54,6 +58,21 @@
       <div id="train-strip" class="train-strip"></div>
       <span class="reward-count" id="reward-count">せいかい 0かい</span>
     </section>
+
+    <!-- チャレンジ HUD(チャレンジ中のみ表示、ごほうび編成と切替) -->
+    <section id="challenge-hud" class="challenge-hud hidden" aria-live="polite">
+      <div class="hud-main">
+        <span class="hud-label" id="hud-label">れんぞく</span>
+        <span class="hud-score" id="hud-score">0</span>
+        <span class="hud-unit" id="hud-unit">もん</span>
+        <span class="hud-timer hidden" id="hud-timer"></span>
+      </div>
+      <!-- 連続モード: 京浜東北線を駅ごとに進む路線図 -->
+      <div id="streak-line" class="streak-line hidden">
+        <div class="streak-now" id="streak-now"></div>
+        <div class="line-track" id="line-track"></div>
+      </div>
+    </section>
   </div>
 
   <!-- 正解演出 -->
@@ -67,6 +86,16 @@
       <div class="setting-group">
         <h3>たすかず</h3>
         <div id="addend-choices" class="addend-choices"></div>
+      </div>
+
+      <div class="setting-group">
+        <h3>はんい</h3>
+        <div id="range-choices" class="range-choices">
+          <button data-max="20" class="range-opt">20まで</button>
+          <button data-max="30" class="range-opt">30まで</button>
+          <button data-max="50" class="range-opt">50まで</button>
+          <button data-max="100" class="range-opt">100まで</button>
+        </div>
       </div>
 
       <div class="setting-group">
@@ -90,6 +119,39 @@
       </div>
 
       <button id="close-settings" class="close-btn">とじる</button>
+    </div>
+  </div>
+
+  <!-- チャレンジ選択オーバーレイ -->
+  <div id="challenge-select" class="overlay hidden" role="dialog" aria-label="チャレンジ">
+    <div class="overlay-card">
+      <h2>チャレンジ 🏆</h2>
+      <div class="challenge-options">
+        <button id="ch-streak" class="challenge-opt">
+          <span class="ch-name">れんぞく せいかい</span>
+          <span class="ch-desc">まちがえるまで なんもん つづく?</span>
+          <span class="ch-best" id="best-streak"></span>
+        </button>
+        <button id="ch-time" class="challenge-opt">
+          <span class="ch-name">60びょう チャレンジ</span>
+          <span class="ch-desc">60びょうで なんもん とける?</span>
+          <span class="ch-best" id="best-time"></span>
+        </button>
+      </div>
+      <button id="close-challenge" class="close-btn">とじる</button>
+    </div>
+  </div>
+
+  <!-- チャレンジ結果オーバーレイ -->
+  <div id="challenge-result" class="overlay hidden" role="dialog" aria-label="けっか">
+    <div class="overlay-card result-card">
+      <div id="result-record" class="result-record hidden">⭐ しんきろく! ⭐</div>
+      <div id="result-text" class="result-text"></div>
+      <div id="result-best" class="result-best"></div>
+      <div class="result-btns">
+        <button id="result-retry" class="close-btn">もういちど</button>
+        <button id="result-end" class="reset-btn">おわる</button>
+      </div>
     </div>
   </div>
 

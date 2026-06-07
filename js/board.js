@@ -4,9 +4,6 @@
 
 const COLS = 10;
 
-// 盤面で扱う最大の数(= 一番大きいマス)。出題の上限やセル生成の共通の基準。
-export const MAX = 30;
-
 /** 数 n が何段目か(1始まり)。例: 11 → 2 */
 export function rowOf(n) {
   return Math.ceil(n / COLS);
