@@ -11,6 +11,7 @@
   --accent: #2b6cb0;
   --accent-dark: #1d4e82;
   --pop: #ff7a59;
+  --line-color: #2b6cb0; /* 路線モードで路線色に差し替わる */
 }
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -189,6 +190,18 @@ html, body {
 .train-strip::-webkit-scrollbar { display: none; }
 .reward-count { font-weight: 700; white-space: nowrap; color: var(--accent); }
 
+/* 車両のラッパー。出発時はこれごと右へ走り去る */
+.train-cars { display: flex; align-items: center; }
+.train-cars.departing {
+  transform: translateX(calc(100% + 60vw));
+  transition: transform 0.75s cubic-bezier(0.45, 0, 0.9, 0.35); /* 加速して発車 */
+}
+.train-cars.arriving { animation: train-arrive 0.5s; }
+@keyframes train-arrive {
+  from { transform: translateX(-50%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
 /* 連結直後のひと弾み */
 .train-strip .car-just-joined { animation: link-bounce 0.45s; }
 @keyframes link-bounce {
@@ -306,5 +319,122 @@ html, body {
   box-shadow: 0 4px 0 var(--accent-dark);
 }
 .close-btn:active { transform: translateY(2px); box-shadow: 0 2px 0 var(--accent-dark); }
+
+/* ===== 隠し: 路線モード ===== */
+
+/* 駅ラベル(マス内) */
+.cell-num { line-height: 1; }
+.cell.has-station { flex-direction: column; gap: 1px; padding: 2px; }
+.cell.has-station .cell-num { font-size: 0.7em; }
+.cell-code {
+  font-size: 0.4em;
+  font-weight: 800;
+  color: #fff;
+  background: var(--line-color);
+  border-radius: 4px;
+  padding: 0 0.4em;
+  line-height: 1.4;
+}
+.cell-name {
+  font-size: 0.4em;
+  font-weight: 700;
+  color: var(--accent-dark);
+  max-width: 96%;
+  ruby-align: center;
+  white-space: nowrap;
+}
+.cell-name rt {
+  font-size: 0.62em;
+  font-weight: 700;
+  color: var(--accent-dark);
+  line-height: 1;
+}
+.cell.has-station { overflow: hidden; }
+
+/* 現在の駅バー */
+.station-bar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(6px, 1.4vw, 14px);
+  background: #fff;
+  border-radius: 16px;
+  padding: clamp(3px, 0.8vh, 8px) clamp(10px, 2vw, 18px);
+  box-shadow: 0 3px 0 var(--cell-edge);
+}
+.station-bar .station-now { font-weight: 700; color: var(--accent-dark); font-size: clamp(12px, 2vh, 16px); }
+.station-code {
+  font-weight: 800;
+  color: #fff;
+  background: var(--line-color);
+  border-radius: 6px;
+  padding: 2px 8px;
+  font-size: clamp(12px, 2vh, 18px);
+}
+.station-name { font-weight: 800; color: var(--accent-dark); font-size: clamp(18px, 3.2vh, 30px); }
+.station-name rt { font-size: 0.46em; font-weight: 700; color: var(--accent); line-height: 1; }
+
+/* CSS で描く路線色の車両(em 基準で親の font-size に追従) */
+.line-car {
+  display: inline-block;
+  width: 1.9em;
+  height: 1.05em;
+  background: var(--car-body, #2b6cb0);
+  border-radius: 3px 7px 3px 3px;
+  position: relative;
+  vertical-align: middle;
+  box-shadow: inset 0 -0.16em 0 rgba(0, 0, 0, 0.18);
+}
+.line-car::before { /* 窓 */
+  content: "";
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 22%;
+  height: 26%;
+  background: rgba(255, 255, 255, 0.92);
+  border-radius: 2px;
+}
+.line-car::after { /* 帯(E531 の青磁帯など) */
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 26%;
+  height: 0.14em;
+  background: var(--car-band, rgba(0, 0, 0, 0.2));
+}
+.line-car.is-engine { border-radius: 8px 8px 3px 3px; }
+.line-car.is-engine::before { left: 22%; right: 22%; }
+
+/* 路線選択オーバーレイ */
+.line-options { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+.line-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 3px solid var(--cell-edge);
+  background: #fff;
+  border-radius: 14px;
+  padding: 12px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+  cursor: pointer;
+}
+.line-opt.selected { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent) inset; }
+.line-chip {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.12);
+}
+.line-chip.normal { background: #eaf4ff; box-shadow: none; }
+.line-opt-name { flex: 1; text-align: left; }
+.line-opt-cars { font-size: 0.85rem; color: var(--accent); font-weight: 800; }
 
 .hidden { display: none; }

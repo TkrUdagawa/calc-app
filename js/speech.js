@@ -68,5 +68,10 @@ export function createSpeech({ enabled = () => true } = {}) {
     speak('もういちど、かぞえてみよう', { rate: 0.95 });
   }
 
-  return { cancel, speakProblem, speakStep, speakCorrect, speakTryAgain };
+  // 10両そろって出発するとき
+  function speakDeparture() {
+    speak('でんしゃ かんせい！ しゅっぱつ しんこう！', { rate: 1, pitch: 1.3 });
+  }
+
+  return { cancel, speakProblem, speakStep, speakCorrect, speakTryAgain, speakDeparture };
 }
