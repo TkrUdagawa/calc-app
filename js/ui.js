@@ -5,6 +5,10 @@ import { LINES, getLine, stationCode, stationName, stationYomi } from './lines.j
 
 const STEP_MS = 340; // 電車アニメーションの所要時間(CSS の .train transition と合わせる)
 
+// 漢字 + ふりがな(ルビ)の HTML。yomi が無くても崩れない。
+const rubyHtml = (name, yomi, cls = '') =>
+  `<ruby${cls ? ` class="${cls}"` : ''}>${name}<rt>${yomi || ''}</rt></ruby>`;
+
 export function createUI({ game, speech, challenge }) {
   const $ = (id) => document.getElementById(id);
   const boardEl = $('board');
@@ -16,6 +20,8 @@ export function createUI({ game, speech, challenge }) {
   const stationBarEl = $('station-bar');
   const rewardEl = document.querySelector('.reward');
   const hudEl = $('challenge-hud');
+  const hudScoreEl = $('hud-score');
+  const hudTimerEl = $('hud-timer');
   const lineTrackEl = $('line-track');
   const streakNowEl = $('streak-now');
   // 連続モードの駅すすみは常に京浜東北線(路線モードの選択とは独立)
@@ -31,7 +37,6 @@ export function createUI({ game, speech, challenge }) {
   const effectiveMode = () => (challenge.state.active ? 'advanced' : game.state.mode);
   let timerId = null; // 60びょうチャレンジのカウントダウン
   let timeLeft = 0;
-  let retryType = 'streak'; // 「もういちど」で再開するチャレンジ種別
   // 車両は内側のラッパーにまとめ、出発時はこれごと右へ走らせる
   const carsEl = document.createElement('div');
   carsEl.className = 'train-cars';
@@ -164,7 +169,7 @@ export function createUI({ game, speech, challenge }) {
       let html = `<span class="cell-num">${n}</span>`;
       if (line.color && (code || name)) {
         if (code) html += `<span class="cell-code">${code}</span>`;
-        if (name) html += `<ruby class="cell-name">${name}<rt>${yomi || ''}</rt></ruby>`;
+        if (name) html += rubyHtml(name, yomi, 'cell-name');
         cell.classList.add('has-station');
       } else {
         cell.classList.remove('has-station');
@@ -185,7 +190,7 @@ export function createUI({ game, speech, challenge }) {
     const name = stationName(line, n);
     const yomi = stationYomi(line, n);
     const nameEl = $('station-name');
-    if (name) nameEl.innerHTML = `<ruby>${name}<rt>${yomi || ''}</rt></ruby>`;
+    if (name) nameEl.innerHTML = rubyHtml(name, yomi);
     else nameEl.textContent = `${n}`;
   }
 
@@ -436,7 +441,7 @@ export function createUI({ game, speech, challenge }) {
     const yomi = stationYomi(KEIHIN, idx);
     streakNowEl.innerHTML =
       `<span class="now-code">${code}</span>` +
-      `<ruby class="now-name">${name}<rt>${yomi}</rt></ruby>` +
+      rubyHtml(name, yomi, 'now-name') +
       (idx >= TERMINUS ? `<span class="terminus">しゅうてん!</span>` : '');
   }
 
@@ -448,18 +453,16 @@ export function createUI({ game, speech, challenge }) {
   }
 
   function updateHud() {
-    $('hud-score').textContent = challenge.state.score;
-    const s = $('hud-score');
-    s.classList.remove('pop');
-    void s.offsetWidth;
-    s.classList.add('pop'); // スコアがポンと跳ねる
+    hudScoreEl.textContent = challenge.state.score;
+    hudScoreEl.classList.remove('pop');
+    void hudScoreEl.offsetWidth;
+    hudScoreEl.classList.add('pop'); // スコアがポンと跳ねる
   }
 
   function tick() {
     timeLeft -= 1;
-    const t = $('hud-timer');
-    t.textContent = `⏱ ${timeLeft}`;
-    t.classList.toggle('low', timeLeft <= 10); // 残りわずかは赤く
+    hudTimerEl.textContent = `⏱ ${timeLeft}`;
+    hudTimerEl.classList.toggle('low', timeLeft <= 10); // 残りわずかは赤く
     if (timeLeft <= 0) {
       clearInterval(timerId);
       timerId = null;
@@ -471,7 +474,6 @@ export function createUI({ game, speech, challenge }) {
     speech.unlockAudio(); // 操作(クリック)のうちに効果音を起こしておく
     $('challenge-select').classList.add('hidden');
     $('challenge-result').classList.add('hidden');
-    retryType = type;
     challenge.start(type);
     // 画面を「チャレンジ用」に切替
     rewardEl.classList.add('hidden');
@@ -480,14 +482,13 @@ export function createUI({ game, speech, challenge }) {
     $('settings-btn').classList.add('hidden');
     $('quit-challenge').classList.remove('hidden');
     $('hud-label').textContent = type === 'streak' ? 'れんぞく' : 'とけた';
-    const timerEl = $('hud-timer');
     if (type === 'time') {
       timeLeft = 60;
-      timerEl.textContent = `⏱ ${timeLeft}`;
-      timerEl.classList.remove('hidden', 'low');
+      hudTimerEl.textContent = `⏱ ${timeLeft}`;
+      hudTimerEl.classList.remove('hidden', 'low');
       timerId = setInterval(tick, 1000);
     } else {
-      timerEl.classList.add('hidden');
+      hudTimerEl.classList.add('hidden');
     }
     // 連続モードだけ京浜東北線の駅すすみを表示
     if (type === 'streak') {
@@ -660,7 +661,7 @@ export function createUI({ game, speech, challenge }) {
     $('ch-streak').addEventListener('click', () => startChallenge('streak'));
     $('ch-time').addEventListener('click', () => startChallenge('time'));
     $('quit-challenge').addEventListener('click', finishChallenge);
-    $('result-retry').addEventListener('click', () => startChallenge(retryType));
+    $('result-retry').addEventListener('click', () => startChallenge(challenge.state.type));
     $('result-end').addEventListener('click', endChallenge);
 
     buildBoard();  // はんいに応じてマスを生成
