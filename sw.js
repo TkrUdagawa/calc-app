@@ -1,6 +1,6 @@
 // Service Worker: 静的ファイルを事前キャッシュし、オフラインでも起動できるようにする。
 // バージョンを上げると古いキャッシュを破棄して更新される。
-const CACHE = 'tashizan-densha-v1';
+const CACHE = 'tashizan-densha-v2';
 const ASSETS = [
   './',
   './index.html',
@@ -12,6 +12,8 @@ const ASSETS = [
   './js/board.js',
   './js/problem.js',
   './js/speech.js',
+  './js/lines.js',
+  './js/challenge.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
 ];

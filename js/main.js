@@ -2,11 +2,13 @@
 
 import { createGame } from './game.js';
 import { createSpeech } from './speech.js';
+import { createChallenge } from './challenge.js';
 import { createUI } from './ui.js';
 
 const game = createGame({ storage: window.localStorage });
 const speech = createSpeech({ enabled: () => game.state.soundOn });
-const ui = createUI({ game, speech });
+const challenge = createChallenge({ storage: window.localStorage });
+const ui = createUI({ game, speech, challenge });
 
 ui.start();
 
