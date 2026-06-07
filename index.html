@@ -29,6 +29,13 @@
       <button id="replay-btn" class="icon-btn small" aria-label="もういちど きく">🔊</button>
     </section>
 
+    <!-- 現在の駅(路線モードのみ表示) -->
+    <section id="station-bar" class="station-bar hidden" aria-live="polite">
+      <span class="station-now">いまの えき</span>
+      <span id="station-code" class="station-code"></span>
+      <span id="station-name" class="station-name"></span>
+    </section>
+
     <!-- 数字盤 + 電車 -->
     <section class="board-wrap">
       <div id="board" class="board"><!-- セルは JS で生成 --></div>
@@ -83,6 +90,15 @@
       </div>
 
       <button id="close-settings" class="close-btn">とじる</button>
+    </div>
+  </div>
+
+  <!-- 隠し: 路線選択オーバーレイ(タイトル長押しで開く) -->
+  <div id="line-select" class="overlay hidden" role="dialog" aria-label="せんろを えらぶ">
+    <div class="overlay-card">
+      <h2>せんろを えらぶ 🚃</h2>
+      <div id="line-options" class="line-options"></div>
+      <button id="close-line-select" class="close-btn">とじる</button>
     </div>
   </div>
 

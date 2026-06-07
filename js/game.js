@@ -10,6 +10,7 @@ const KEYS = {
   addendChoice: 'td.addendChoice',
   mode: 'td.mode',
   soundOn: 'td.soundOn',
+  lineId: 'td.lineId',
 };
 
 /**
@@ -32,6 +33,7 @@ export function createGame({ storage, rng = Math.random } = {}) {
     addendChoice: parseAddend(load(KEYS.addendChoice, 'random')),
     mode: load(KEYS.mode, 'beginner'),         // 'beginner' | 'advanced'
     soundOn: load(KEYS.soundOn, 'true') === 'true',
+    lineId: load(KEYS.lineId, 'normal'),       // 隠しモードの路線('normal' は通常)
   };
 
   // 'random' はそのまま、それ以外は数値の足す数として解釈する
@@ -85,6 +87,11 @@ export function createGame({ storage, rng = Math.random } = {}) {
     storage.setItem(KEYS.soundOn, String(state.soundOn));
   }
 
+  function setLine(id) {
+    state.lineId = id;
+    storage.setItem(KEYS.lineId, id);
+  }
+
   return {
     state,
     newProblem,
@@ -95,5 +102,6 @@ export function createGame({ storage, rng = Math.random } = {}) {
     setAddendChoice,
     setMode,
     setSoundOn,
+    setLine,
   };
 }
