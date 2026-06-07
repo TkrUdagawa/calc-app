@@ -94,7 +94,7 @@ html, body {
 }
 .board {
   display: grid;
-  grid-template-columns: repeat(10, 1fr);
+  grid-template-columns: repeat(10, 1fr); /* 列数は board.js の COLS と一致させること */
   grid-auto-rows: 1fr;
   gap: clamp(4px, 0.9vmin, 10px);
   width: 100%;
