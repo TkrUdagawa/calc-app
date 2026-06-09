@@ -61,8 +61,22 @@ python3 -m http.server 8000
 2. 共有ボタン → **「ホーム画面に追加」**
 3. 以降はホーム画面のアイコンから、全画面・オフラインで起動できる
 
-> ちゃんと公開して使う場合は、GitHub Pages や Netlify など HTTPS の静的ホスティングに
-> ファイル一式を置くのが手軽（Service Worker は https か localhost が必要）。
+## GitHub Pages で公開
+
+ビルド不要の静的サイトなので、ファイル一式をそのまま GitHub Pages で配信できる
+(相対パスで作ってあるので `/calc-app/` のようなサブパスでも動く)。ルートの空ファイル
+`.nojekyll` で Jekyll を無効化し、`js/` や `icons/` を含む全ファイルをそのまま配る。
+
+1. コードを GitHub の `main` に push(下記「公開手順」参照)。
+2. リポジトリの **Settings → Pages** を開く。
+3. **Source: Deploy from a branch** → **Branch: `main` / `(root)`** → Save。
+4. 数十秒後、`https://<ユーザー名>.github.io/calc-app/` で公開される
+   (このリポジトリなら **https://tkrudagawa.github.io/calc-app/**)。
+5. iPad の Safari でそのURLを開き、共有 → **「ホーム画面に追加」**(HTTPS なので PWA も動く)。
+
+> 更新は `main` に push するたびに自動で反映される。`sw.js`(Service Worker)は
+> オフライン用に静的ファイルをキャッシュするので、内容を更新したら `sw.js` の
+> `CACHE` バージョン(`tashizan-densha-vN`)を上げると確実に最新へ入れ替わる。
 
 ## テスト
 
