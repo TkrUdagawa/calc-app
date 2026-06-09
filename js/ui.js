@@ -5,6 +5,18 @@ import { LINES, getLine, stationCode, stationName, stationYomi } from './lines.j
 
 const STEP_MS = 340; // 電車アニメーションの所要時間(CSS の .train transition と合わせる)
 
+// 60びょうチャレンジ: 1問あたりの速度(難易度=おまかせ上限ごと)。難しいほど速い。
+const KMH_PER_PROBLEM = { 5: 10, 7: 15, 9: 20 };
+
+// 速度から電車のランク(速いほど上位)
+function trainClass(kmh) {
+  if (kmh >= 200) return { emoji: '🚅', name: 'しんかんせん' };
+  if (kmh >= 120) return { emoji: '🚄', name: 'とっきゅう' };
+  if (kmh >= 60) return { emoji: '🚆', name: 'きゅうこう' };
+  if (kmh >= 1) return { emoji: '🚃', name: 'ふつうでんしゃ' };
+  return { emoji: '🚃', name: '' };
+}
+
 // 漢字 + ふりがな(ルビ)の HTML。yomi が無くても崩れない。
 const rubyHtml = (name, yomi, cls = '') =>
   `<ruby${cls ? ` class="${cls}"` : ''}>${name}<rt>${yomi || ''}</rt></ruby>`;
@@ -37,6 +49,7 @@ export function createUI({ game, speech, challenge }) {
   const effectiveMode = () => (challenge.state.active ? 'advanced' : game.state.mode);
   let timerId = null; // 60びょうチャレンジのカウントダウン
   let timeLeft = 0;
+  let challengeMax = 9; // チャレンジの難易度(おまかせ上限 5/7/9)
   // 車両は内側のラッパーにまとめ、出発時はこれごと右へ走らせる
   const carsEl = document.createElement('div');
   carsEl.className = 'train-cars';
@@ -279,8 +292,12 @@ export function createUI({ game, speech, challenge }) {
 
   // ---- 出題 ----
   function nextProblem() {
-    // チャレンジ中は「おまかせ」を強制(保存値は変えない)
-    game.newProblem(challenge.state.active ? 'random' : game.state.addendChoice);
+    // チャレンジ中は「おまかせ(難易度の上限まで)」を強制(保存値は変えない)
+    const active = challenge.state.active;
+    game.newProblem(
+      active ? 'random' : game.state.addendChoice,
+      active ? challengeMax : game.state.randomMax
+    );
     renderProblem();
     renderMode();
     trainEl.style.opacity = '1'; // 連結演出で隠した電車を戻す
@@ -445,11 +462,29 @@ export function createUI({ game, speech, challenge }) {
       (idx >= TERMINUS ? `<span class="terminus">しゅうてん!</span>` : '');
   }
 
+  function refreshDiffUI() {
+    document.querySelectorAll('.diff-opt').forEach((el) =>
+      el.classList.toggle('selected', Number(el.dataset.chmax) === challengeMax));
+  }
+
   function openChallengeSelect() {
     speech.cancel();
     $('best-streak').textContent = `ベスト: ${challenge.state.best.streak}もん`;
     $('best-time').textContent = `ベスト: ${challenge.state.best.time}もん`;
+    refreshDiffUI();
     $('challenge-select').classList.remove('hidden');
+  }
+
+  // 60びょうの現在スピード(km/h)= とけた数 × 難易度ごとの1問あたり
+  const currentSpeed = () => challenge.state.score * (KMH_PER_PROBLEM[challengeMax] || 10);
+
+  function updateSpeed() {
+    const kmh = currentSpeed();
+    const c = trainClass(kmh);
+    $('time-speed').innerHTML =
+      `<span class="speed-emoji">${c.emoji}</span>` +
+      `<span class="speed-kmh">${kmh}</span><span class="speed-unit">km/h</span>` +
+      (c.name ? `<span class="speed-name">${c.name}</span>` : '');
   }
 
   function updateHud() {
@@ -457,6 +492,7 @@ export function createUI({ game, speech, challenge }) {
     hudScoreEl.classList.remove('pop');
     void hudScoreEl.offsetWidth;
     hudScoreEl.classList.add('pop'); // スコアがポンと跳ねる
+    if (challenge.state.type === 'time') updateSpeed();
   }
 
   function tick() {
@@ -490,14 +526,11 @@ export function createUI({ game, speech, challenge }) {
     } else {
       hudTimerEl.classList.add('hidden');
     }
-    // 連続モードだけ京浜東北線の駅すすみを表示
-    if (type === 'streak') {
-      $('streak-line').classList.remove('hidden');
-      updateStreakLine();
-    } else {
-      $('streak-line').classList.add('hidden');
-    }
-    updateHud();
+    // モード別の表示: 連続=京浜東北の駅すすみ / 60びょう=スピード
+    $('streak-line').classList.toggle('hidden', type !== 'streak');
+    $('time-speed').classList.toggle('hidden', type !== 'time');
+    if (type === 'streak') updateStreakLine();
+    updateHud(); // time のときは updateSpeed も走る
     nextProblem();
   }
 
@@ -537,7 +570,13 @@ export function createUI({ game, speech, challenge }) {
         : '';
       $('result-text').innerHTML = `れんぞく ${score}もん!${reached}`;
     } else {
-      $('result-text').textContent = `60びょうで ${score}もん!`;
+      // 60びょう: 到達スピードと電車のランクを併記
+      const kmh = currentSpeed();
+      const c = trainClass(kmh);
+      const speed = score > 0
+        ? `<br><span class="reached">${c.emoji} ${kmh}km/h${c.name ? ' ' + c.name : ''}!</span>`
+        : '';
+      $('result-text').innerHTML = `60びょうで ${score}もん!${speed}`;
     }
     $('result-best').textContent = `ベスト: ${best[type]}もん`;
     celebrate();
@@ -570,12 +609,19 @@ export function createUI({ game, speech, challenge }) {
       b.addEventListener('click', () => selectAddend(a));
       wrap.appendChild(b);
     }
-    const omakase = document.createElement('button');
-    omakase.textContent = '✨ おまかせ ✨';
-    omakase.className = 'omakase';
-    omakase.dataset.addend = 'random';
-    omakase.addEventListener('click', () => selectAddend('random'));
-    wrap.appendChild(omakase);
+    // おまかせ: 上限(〜5/〜7/〜9)を選ぶ。選ぶと足す数は 1〜上限 のランダムになる。
+    const row = document.createElement('div');
+    row.className = 'omakase-row';
+    row.innerHTML = '<span class="omakase-label">✨ おまかせ ✨</span>';
+    for (const n of [5, 7, 9]) {
+      const b = document.createElement('button');
+      b.className = 'omakase-cap';
+      b.dataset.randommax = String(n);
+      b.textContent = '〜' + n;
+      b.addEventListener('click', () => selectRandomCap(n));
+      row.appendChild(b);
+    }
+    wrap.appendChild(row);
 
     document.querySelectorAll('.range-opt').forEach((el) =>
       el.addEventListener('click', () => selectMax(Number(el.dataset.max))));
@@ -595,9 +641,13 @@ export function createUI({ game, speech, challenge }) {
 
   function refreshSettingsUI() {
     const a = game.state.addendChoice;
-    document.querySelectorAll('#addend-choices button').forEach((b) => {
-      const v = b.dataset.addend === 'random' ? 'random' : Number(b.dataset.addend);
-      b.classList.toggle('selected', v === a);
+    // 固定の足す数(+1〜+9)
+    document.querySelectorAll('#addend-choices button[data-addend]').forEach((b) => {
+      b.classList.toggle('selected', Number(b.dataset.addend) === a);
+    });
+    // おまかせの上限(addendChoice が 'random' のとき、選んだ上限を強調)
+    document.querySelectorAll('#addend-choices .omakase-cap').forEach((b) => {
+      b.classList.toggle('selected', a === 'random' && Number(b.dataset.randommax) === game.state.randomMax);
     });
     document.querySelectorAll('.range-opt').forEach((el) =>
       el.classList.toggle('selected', Number(el.dataset.max) === game.state.maxNumber));
@@ -608,6 +658,12 @@ export function createUI({ game, speech, challenge }) {
   }
 
   function selectAddend(a) { game.setAddendChoice(a); refreshSettingsUI(); }
+  // 「おまかせ〜N」を選ぶ: おまかせ + 上限 N
+  function selectRandomCap(n) {
+    game.setAddendChoice('random');
+    game.setRandomMax(n);
+    refreshSettingsUI();
+  }
   // はんいを変えたら盤面を作り直し、駅ラベルも貼り直す(出題は設定を閉じたときに更新)
   function selectMax(n) {
     game.setMax(n);
@@ -658,6 +714,8 @@ export function createUI({ game, speech, challenge }) {
     // チャレンジ関連
     $('challenge-btn').addEventListener('click', openChallengeSelect);
     $('close-challenge').addEventListener('click', () => $('challenge-select').classList.add('hidden'));
+    document.querySelectorAll('.diff-opt').forEach((el) =>
+      el.addEventListener('click', () => { challengeMax = Number(el.dataset.chmax); refreshDiffUI(); }));
     $('ch-streak').addEventListener('click', () => startChallenge('streak'));
     $('ch-time').addEventListener('click', () => startChallenge('time'));
     $('quit-challenge').addEventListener('click', finishChallenge);

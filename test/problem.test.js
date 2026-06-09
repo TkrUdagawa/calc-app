@@ -40,6 +40,15 @@ test('makeProblem random addend at rng~1 picks addend 9', () => {
   assert.equal(p.addend, 9);
 });
 
+test('makeProblem "random" respects an addendMax cap', () => {
+  const p = makeProblem({ addend: 'random', max: 30, addendMax: 7, rng: constRng(0.999999) });
+  assert.equal(p.addend, 7);
+  for (let i = 0; i < 300; i++) {
+    const q = makeProblem({ addend: 'random', max: 30, addendMax: 7, rng: Math.random });
+    assert.ok(q.addend >= 1 && q.addend <= 7, `addend ${q.addend} out of 1..7`);
+  }
+});
+
 test('makeProblem always produces valid problems across many random draws', () => {
   for (let i = 0; i < 500; i++) {
     const p = makeProblem({ addend: 'random', max: 30, rng: Math.random });

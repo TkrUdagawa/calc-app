@@ -72,6 +72,8 @@
         <div class="streak-now" id="streak-now"></div>
         <div class="line-track" id="line-track"></div>
       </div>
+      <!-- 60びょうモード: とけた数を電車のスピードに換算 -->
+      <div id="time-speed" class="time-speed hidden"></div>
     </section>
   </div>
 
@@ -137,6 +139,14 @@
           <span class="ch-desc">60びょうで なんもん とける?</span>
           <span class="ch-best" id="best-time"></span>
         </button>
+      </div>
+      <div class="ch-difficulty">
+        <span class="ch-diff-label">むずかしさ(たす数)</span>
+        <div id="ch-diff-opts" class="ch-diff-opts">
+          <button data-chmax="5" class="diff-opt">〜5</button>
+          <button data-chmax="7" class="diff-opt">〜7</button>
+          <button data-chmax="9" class="diff-opt">〜9</button>
+        </div>
       </div>
       <button id="close-challenge" class="close-btn">とじる</button>
     </div>

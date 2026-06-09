@@ -11,6 +11,7 @@ const KEYS = {
   soundOn: 'td.soundOn',
   lineId: 'td.lineId',
   maxNumber: 'td.maxNumber',
+  randomMax: 'td.randomMax',
 };
 
 const DEFAULT_MAX = 30;
@@ -37,6 +38,7 @@ export function createGame({ storage, rng = Math.random } = {}) {
     soundOn: load(KEYS.soundOn, 'true') === 'true',
     lineId: load(KEYS.lineId, 'normal'),       // 隠しモードの路線('normal' は通常)
     maxNumber: Number(load(KEYS.maxNumber, DEFAULT_MAX)), // 数字盤・出題の上限(20/30/50/100)
+    randomMax: Number(load(KEYS.randomMax, 9)), // 「おまかせ」の足す数の上限(5/7/9)
   };
 
   // 'random' はそのまま、それ以外は数値の足す数として解釈する
@@ -45,9 +47,9 @@ export function createGame({ storage, rng = Math.random } = {}) {
     return s === 'random' ? 'random' : Number(s);
   }
 
-  // addendChoice を一時的に上書きできる(チャレンジのおまかせ強制用。保存値は変えない)。
-  function newProblem(addendChoice = state.addendChoice) {
-    const p = makeProblem({ addend: addendChoice, max: state.maxNumber, rng });
+  // addendChoice / addendMax を一時的に上書きできる(チャレンジ用。保存値は変えない)。
+  function newProblem(addendChoice = state.addendChoice, addendMax = state.randomMax) {
+    const p = makeProblem({ addend: addendChoice, max: state.maxNumber, addendMax, rng });
     state.problem = p;
     state.trainPos = p.start;
     state.stepsLeft = p.addend;
@@ -101,6 +103,11 @@ export function createGame({ storage, rng = Math.random } = {}) {
     storage.setItem(KEYS.maxNumber, state.maxNumber);
   }
 
+  function setRandomMax(n) {
+    state.randomMax = Number(n);
+    storage.setItem(KEYS.randomMax, state.randomMax);
+  }
+
   return {
     state,
     newProblem,
@@ -113,5 +120,6 @@ export function createGame({ storage, rng = Math.random } = {}) {
     setSoundOn,
     setLine,
     setMax,
+    setRandomMax,
   };
 }

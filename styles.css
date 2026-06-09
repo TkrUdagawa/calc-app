@@ -277,8 +277,46 @@ html, body {
   color: var(--ink);
   cursor: pointer;
 }
-.addend-choices button.omakase { grid-column: span 5; background: #fff7ed; border-color: var(--goal-edge); }
 .addend-choices button.selected { background: var(--accent); color: #fff; border-color: var(--accent-dark); }
+
+/* おまかせ: ラベル + 上限(〜5/〜7/〜9) */
+.omakase-row {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.omakase-label { font-weight: 800; color: var(--accent-dark); white-space: nowrap; }
+.omakase-cap {
+  flex: 1;
+  border: 3px solid var(--goal-edge);
+  background: #fff7ed;
+  border-radius: 12px;
+  padding: 10px 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--ink);
+  cursor: pointer;
+}
+.omakase-cap.selected { background: var(--accent); color: #fff; border-color: var(--accent-dark); }
+
+/* チャレンジ難易度(おまかせ上限) */
+.ch-difficulty { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+.ch-diff-label { font-weight: 700; color: var(--accent-dark); white-space: nowrap; font-size: 0.95rem; }
+.ch-diff-opts { display: flex; gap: 8px; flex: 1; }
+.diff-opt {
+  flex: 1;
+  border: 3px solid var(--cell-edge);
+  background: #fff;
+  border-radius: 12px;
+  padding: 10px 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--ink);
+  cursor: pointer;
+}
+.diff-opt.selected { background: var(--accent); color: #fff; border-color: var(--accent-dark); }
 
 .range-choices { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .range-opt {
@@ -498,6 +536,26 @@ html, body {
   0% { transform: scale(0.6); }
   60% { transform: scale(1.25); }
   100% { transform: scale(1); }
+}
+
+/* 60びょう: スピード表示 */
+.time-speed { display: flex; align-items: center; justify-content: center; gap: 6px; }
+.speed-emoji { font-size: clamp(20px, 3.6vh, 32px); }
+.speed-kmh {
+  font-weight: 900;
+  color: var(--accent);
+  font-size: clamp(26px, 5vh, 44px);
+  animation: score-pop 0.35s;
+}
+.speed-unit { font-weight: 800; color: var(--accent-dark); font-size: clamp(13px, 2vh, 18px); }
+.speed-name {
+  font-weight: 800;
+  color: #fff;
+  background: var(--accent);
+  border-radius: 8px;
+  padding: 2px 10px;
+  margin-left: 6px;
+  font-size: clamp(13px, 2.2vh, 18px);
 }
 
 /* 連続モード: 京浜東北線の駅すすみ路線図 */

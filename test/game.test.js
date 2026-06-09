@@ -35,6 +35,24 @@ test('newProblem keeps the goal within the configured range', () => {
   assert.ok(g.state.problem.start >= 1);
 });
 
+test('randomMax (おまかせ上限) defaults to 9 and persists', () => {
+  const storage = fakeStorage();
+  const g = createGame({ storage, rng: fixedRng });
+  assert.equal(g.state.randomMax, 9);
+  g.setRandomMax(7);
+  assert.equal(g.state.randomMax, 7);
+  const g2 = createGame({ storage, rng: fixedRng });
+  assert.equal(g2.state.randomMax, 7);
+});
+
+test('newProblem with おまかせ respects randomMax', () => {
+  const g = createGame({ storage: fakeStorage(), rng: () => 0.999999 });
+  g.setAddendChoice('random');
+  g.setRandomMax(7);
+  g.newProblem();
+  assert.ok(g.state.problem.addend >= 1 && g.state.problem.addend <= 7);
+});
+
 test('new game starts the train at the problem start position', () => {
   const g = createGame({ storage: fakeStorage(), rng: fixedRng });
   g.setAddendChoice(7);
