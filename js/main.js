@@ -1,14 +1,15 @@
 // 起動: 実物の localStorage / SpeechSynthesis を使って各モジュールを結線する。
 
 import { createGame } from './game.js';
-import { createSpeech } from './speech.js';
+import { createSpeech, createRecognizer } from './speech.js';
 import { createChallenge } from './challenge.js';
 import { createUI } from './ui.js';
 
 const game = createGame({ storage: window.localStorage });
 const speech = createSpeech({ enabled: () => game.state.soundOn });
 const challenge = createChallenge({ storage: window.localStorage });
-const ui = createUI({ game, speech, challenge });
+const recog = createRecognizer({ lang: 'ja-JP' });
+const ui = createUI({ game, speech, challenge, recog });
 
 ui.start();
 

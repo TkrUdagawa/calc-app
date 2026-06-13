@@ -2,6 +2,8 @@
 // 正解演出、設定オーバーレイを結線する。game と speech に依存する。
 
 import { LINES, getLine, stationCode, stationName, stationYomi } from './lines.js';
+import { makeCouplingProblem } from './problem.js';
+import { parseSpokenNumber } from './numwords.js';
 
 const STEP_MS = 340; // 電車アニメーションの所要時間(CSS の .train transition と合わせる)
 
@@ -21,7 +23,7 @@ function trainClass(kmh) {
 const rubyHtml = (name, yomi, cls = '') =>
   `<ruby${cls ? ` class="${cls}"` : ''}>${name}<rt>${yomi || ''}</rt></ruby>`;
 
-export function createUI({ game, speech, challenge }) {
+export function createUI({ game, speech, challenge, recog }) {
   const $ = (id) => document.getElementById(id);
   const boardEl = $('board');
   const boardWrap = boardEl.parentElement;
@@ -50,6 +52,8 @@ export function createUI({ game, speech, challenge }) {
   let timerId = null; // 60びょうチャレンジのカウントダウン
   let timeLeft = 0;
   let challengeMax = 9; // チャレンジの難易度(おまかせ上限 5/7/9)
+  let coupleProblem = null; // 連結モードの現在の問題 {a,b,sum}
+  let coupleBusy = false;   // 連結アニメ中の入力ロック
   // 車両は内側のラッパーにまとめ、出発時はこれごと右へ走らせる
   const carsEl = document.createElement('div');
   carsEl.className = 'train-cars';
@@ -516,6 +520,7 @@ export function createUI({ game, speech, challenge }) {
     hudEl.classList.remove('hidden');
     $('challenge-btn').classList.add('hidden');
     $('settings-btn').classList.add('hidden');
+    $('couple-btn').classList.add('hidden');
     $('quit-challenge').classList.remove('hidden');
     $('hud-label').textContent = type === 'streak' ? 'れんぞく' : 'とけた';
     if (type === 'time') {
@@ -593,8 +598,103 @@ export function createUI({ game, speech, challenge }) {
     $('quit-challenge').classList.add('hidden');
     $('challenge-btn').classList.remove('hidden');
     $('settings-btn').classList.remove('hidden');
+    $('couple-btn').classList.remove('hidden');
     renderTrainStrip(); // 通常の編成を戻す
     nextProblem();
+  }
+
+  // ---- 連結モード(音声/タップで合計を答える) ----
+  const COUPLE_STEP_MS = 600;
+
+  function coupleCar(which) {
+    const c = document.createElement('span');
+    c.className = 'couple-car ' + which; // a / b で色分け
+    return c;
+  }
+
+  function renderTrains(a, b) {
+    const ta = $('train-a');
+    const tb = $('train-b');
+    ta.innerHTML = '';
+    tb.innerHTML = '';
+    for (let i = 0; i < a; i++) ta.appendChild(coupleCar('a'));
+    for (let i = 0; i < b; i++) tb.appendChild(coupleCar('b'));
+    document.querySelector('.couple-trains').classList.remove('coupled');
+  }
+
+  function buildCouplePad() {
+    const pad = $('couple-pad');
+    pad.innerHTML = '';
+    for (let n = 2; n <= 18; n++) {
+      const b = document.createElement('button');
+      b.className = 'pad-key';
+      b.textContent = n;
+      b.addEventListener('click', () => checkCouple(n));
+      pad.appendChild(b);
+    }
+  }
+
+  function nextCouple() {
+    coupleBusy = false;
+    coupleProblem = makeCouplingProblem({ rng: Math.random });
+    const { a, b } = coupleProblem;
+    $('cp-a').textContent = a;
+    $('cp-b').textContent = b;
+    $('cp-q').textContent = '？';
+    $('couple-status').textContent = '';
+    renderTrains(a, b);
+    speech.speakProblem(a, b); // 「5たす8わ?」
+  }
+
+  function checkCouple(n) {
+    if (coupleBusy || !coupleProblem) return;
+    if (n === coupleProblem.sum) {
+      coupleBusy = true;
+      recog.stop();
+      $('cp-q').textContent = coupleProblem.sum;
+      $('couple-status').textContent = '';
+      document.querySelector('.couple-trains').classList.add('coupled'); // 連結アニメ
+      celebrate();
+      speech.speakCoupleResult(coupleProblem.sum); // 「ぜんぶで 13りょう! やったね!」
+      setTimeout(nextCouple, COUPLE_STEP_MS + 1400);
+    } else {
+      $('couple-status').textContent = 'もういちど！ かぞえてみよう';
+      speech.speakTryAgain();
+    }
+  }
+
+  function onMic() {
+    if (coupleBusy) return;
+    $('couple-status').textContent = 'きいているよ… 🎤';
+    recog.listen(
+      (alts) => {
+        for (const t of alts) {
+          const n = parseSpokenNumber(t);
+          if (n != null) { checkCouple(n); return; }
+        }
+        $('couple-status').textContent = 'もういちど！ すうじでもOK';
+      },
+      (err) => {
+        if (err === 'not-allowed') $('couple-status').textContent = 'マイクの きょかが ひつようだよ';
+        else if (err === 'no-speech') $('couple-status').textContent = 'きこえなかった、もういちど';
+        else $('couple-status').textContent = 'すうじで こたえてね';
+      }
+    );
+  }
+
+  function enterCouple() {
+    speech.cancel();
+    document.body.classList.add('couple-mode');
+    $('couple-view').classList.remove('hidden');
+    nextCouple();
+  }
+
+  function exitCouple() {
+    recog.stop();
+    coupleProblem = null;
+    document.body.classList.remove('couple-mode');
+    $('couple-view').classList.add('hidden');
+    nextProblem(); // 通常の数字盤に戻る
   }
 
   // ---- 設定オーバーレイ ----
@@ -718,6 +818,16 @@ export function createUI({ game, speech, challenge }) {
       el.addEventListener('click', () => { challengeMax = Number(el.dataset.chmax); refreshDiffUI(); }));
     $('ch-streak').addEventListener('click', () => startChallenge('streak'));
     $('ch-time').addEventListener('click', () => startChallenge('time'));
+
+    // 連結モード
+    buildCouplePad();
+    if (!recog.supported) $('mic-btn').classList.add('hidden'); // 非対応はタップのみ
+    $('couple-btn').addEventListener('click', enterCouple);
+    $('couple-back').addEventListener('click', exitCouple);
+    $('mic-btn').addEventListener('click', onMic);
+    $('couple-replay').addEventListener('click', () => {
+      if (coupleProblem) speech.speakProblem(coupleProblem.a, coupleProblem.b);
+    });
     $('quit-challenge').addEventListener('click', finishChallenge);
     $('result-retry').addEventListener('click', () => startChallenge(challenge.state.type));
     $('result-end').addEventListener('click', endChallenge);

@@ -21,3 +21,13 @@ export function makeProblem({ addend, max = 30, addendMax = 9, rng = Math.random
   const start = randInt(1, max - a, rng);
   return { start, addend: a, goal: start + a };
 }
+
+/**
+ * 連結モードの出題。1桁 + 1桁(両方 1〜9)。
+ * @returns {{a:number, b:number, sum:number}}
+ */
+export function makeCouplingProblem({ rng = Math.random } = {}) {
+  const a = randInt(1, 9, rng);
+  const b = randInt(1, 9, rng);
+  return { a, b, sum: a + b };
+}

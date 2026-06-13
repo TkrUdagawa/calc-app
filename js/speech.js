@@ -11,6 +11,43 @@ function numToYomi(n) {
   return NUM_WORDS[n] ?? String(n);
 }
 
+// 音声認識(連結モードの回答用)。webkitSpeechRecognition の薄いラッパー。
+// オンライン必須・マイク許可が必要。非対応環境は supported=false でタップにフォールバック。
+export function createRecognizer({ lang = 'ja-JP' } = {}) {
+  const Ctor = typeof window !== 'undefined'
+    ? (window.SpeechRecognition || window.webkitSpeechRecognition)
+    : null;
+  const supported = !!Ctor;
+  let rec = null;
+  let listening = false;
+
+  function listen(onResult, onError) {
+    if (!supported) { if (onError) onError('unsupported'); return; }
+    if (listening) return;
+    rec = new Ctor();
+    rec.lang = lang;
+    rec.interimResults = false;
+    rec.maxAlternatives = 5; // 幼児の発音に備え候補を多めに
+    rec.continuous = false;
+    listening = true;
+    rec.onresult = (e) => {
+      const res = e.results[0];
+      const alts = [];
+      for (let i = 0; i < res.length; i++) alts.push(res[i].transcript);
+      if (onResult) onResult(alts);
+    };
+    rec.onerror = (e) => { if (onError) onError(e.error || 'error'); };
+    rec.onend = () => { listening = false; };
+    try { rec.start(); } catch (err) { listening = false; if (onError) onError('error'); }
+  }
+
+  function stop() {
+    if (rec && listening) { try { rec.stop(); } catch (e) { /* noop */ } }
+  }
+
+  return { supported, listen, stop };
+}
+
 export function createSpeech({ enabled = () => true } = {}) {
   const synth = typeof window !== 'undefined' ? window.speechSynthesis : null;
   const supported = !!synth;
@@ -79,6 +116,11 @@ export function createSpeech({ enabled = () => true } = {}) {
     speak(`${head}${score}もん！ すごい！`, { rate: 1, pitch: 1.3 });
   }
 
+  // 連結モードの正解(車両なので「りょう」)
+  function speakCoupleResult(sum) {
+    speak(`${sum}りょう！ やったね！`, { rate: 1, pitch: 1.3 });
+  }
+
   // ---- 効果音(Web Audio。ファイル不要・オフライン可) ----
   let audioCtx = null;
   function ensureAudio() {
@@ -121,6 +163,6 @@ export function createSpeech({ enabled = () => true } = {}) {
 
   return {
     cancel, speakProblem, speakStep, speakCorrect, speakTryAgain, speakDeparture, speakResult,
-    chimeCorrect, unlockAudio,
+    speakCoupleResult, chimeCorrect, unlockAudio,
   };
 }
