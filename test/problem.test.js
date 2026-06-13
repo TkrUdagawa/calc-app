@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeProblem } from '../js/problem.js';
+import { makeProblem, makeCouplingProblem } from '../js/problem.js';
 
 // rng は [0,1) を返す関数。テストでは固定値を注入して決定的に検証する。
 const constRng = (v) => () => v;
@@ -46,6 +46,15 @@ test('makeProblem "random" respects an addendMax cap', () => {
   for (let i = 0; i < 300; i++) {
     const q = makeProblem({ addend: 'random', max: 30, addendMax: 7, rng: Math.random });
     assert.ok(q.addend >= 1 && q.addend <= 7, `addend ${q.addend} out of 1..7`);
+  }
+});
+
+test('makeCouplingProblem gives two 1-digit operands (1..9) and their sum', () => {
+  for (let i = 0; i < 300; i++) {
+    const p = makeCouplingProblem({ rng: Math.random });
+    assert.ok(p.a >= 1 && p.a <= 9, `a ${p.a}`);
+    assert.ok(p.b >= 1 && p.b <= 9, `b ${p.b}`);
+    assert.equal(p.sum, p.a + p.b);
   }
 });
 

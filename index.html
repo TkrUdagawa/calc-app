@@ -17,6 +17,7 @@
     <header class="app-header">
       <h1 class="app-title">たしざんでんしゃ <span aria-hidden="true">🚃</span></h1>
       <div class="header-btns">
+        <button id="couple-btn" class="icon-btn" aria-label="れんけつ">🚃</button>
         <button id="challenge-btn" class="icon-btn" aria-label="チャレンジ">🏆</button>
         <button id="settings-btn" class="icon-btn" aria-label="せってい">⚙️</button>
         <button id="quit-challenge" class="quit-btn hidden">やめる</button>
@@ -74,6 +75,24 @@
       </div>
       <!-- 60びょうモード: とけた数を電車のスピードに換算 -->
       <div id="time-speed" class="time-speed hidden"></div>
+    </section>
+
+    <!-- 連結モード(専用ビュー。れんけつ中のみ表示) -->
+    <section id="couple-view" class="couple-view hidden">
+      <div class="couple-problem">
+        <span id="cp-a">5</span><span class="problem-op">＋</span><span id="cp-b">8</span>
+        <span class="problem-op">＝</span><span class="problem-q" id="cp-q">？</span>
+        <button id="couple-replay" class="icon-btn small" aria-label="もういちど きく">🔊</button>
+      </div>
+      <div class="couple-trains">
+        <div id="train-a" class="couple-train"></div>
+        <span class="coupler" aria-hidden="true">＋</span>
+        <div id="train-b" class="couple-train"></div>
+      </div>
+      <div id="couple-status" class="couple-status"></div>
+      <button id="mic-btn" class="mic-btn">🎤 こえで こたえる</button>
+      <div id="couple-pad" class="couple-pad"></div>
+      <button id="couple-back" class="couple-back">← もどる</button>
     </section>
   </div>
 
